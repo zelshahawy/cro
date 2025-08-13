@@ -42,6 +42,10 @@ else()
   endif()
 endif()
 
+# Libraries from vcpkg
+find_package(ftxui CONFIG REQUIRED)
+find_package(SQLite3 REQUIRED)
+
 # Sanitizers (non‑MSVC)
 if(NOT MSVC)
   if(CRO_ENABLE_ASAN)
@@ -54,7 +58,7 @@ if(NOT MSVC)
   endif()
 endif()
 
-# Core library (place shared logic here)
+# shared logic.
 add_library(cro_core
   src/core/config.cpp
 )
@@ -73,6 +77,10 @@ add_executable(cro
 )
 
 target_link_libraries(cro PRIVATE cro_core)
+target_link_libraries(cro_core PUBLIC SQLite::SQLite3)
+target_link_libraries(cro PRIVATE cro_core ftxui::screen ftxui::dom ftxui::component)
+target_sources(cro PRIVATE src/tui.cpp)
+target_sources(cro_core PRIVATE src/core/db.cpp)
 
 target_include_directories(cro PRIVATE
   ${CMAKE_SOURCE_DIR}/include

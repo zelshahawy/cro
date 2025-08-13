@@ -1,5 +1,8 @@
 {
   "name": "cro",
   "version-string": "0.1.0",
-  "dependencies": []
+  "dependencies": [
+    "ftxui",
+    "sqlite3"
+  ]
 }
