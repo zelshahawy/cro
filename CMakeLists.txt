@@ -43,7 +43,14 @@ else()
 endif()
 
 # Libraries from vcpkg
-find_package(ftxui CONFIG REQUIRED)
+include(FetchContent)
+FetchContent_Declare(
+  ftxui
+  GIT_REPOSITORY https://github.com/ArthurSonzogni/FTXUI.git
+  GIT_TAG v6.1.9
+)
+FetchContent_MakeAvailable(ftxui)
+
 find_package(SQLite3 REQUIRED)
 
 # Sanitizers (non‑MSVC)
