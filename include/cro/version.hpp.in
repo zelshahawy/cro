@@ -1,0 +1,3 @@
+#pragma once
+#define CRO_VERSION_STRING "@PROJECT_VERSION@"
+#define CRO_GIT_COMMIT "@GIT_COMMIT@"

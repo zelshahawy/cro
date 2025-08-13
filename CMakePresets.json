@@ -1,0 +1,36 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "dev",
+      "binaryDir": "build/dev",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "dev-vcpkg",
+      "inherits": "dev",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+      }
+    },
+    {
+      "name": "rel-vcpkg",
+      "binaryDir": "build/rel-vcpkg",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "dev", "configurePreset": "dev" },
+    { "name": "dev-vcpkg", "configurePreset": "dev-vcpkg" },
+    { "name": "rel-vcpkg", "configurePreset": "rel-vcpkg" }
+  ],
+  "testPresets": [
+    { "name": "dev", "configurePreset": "dev" },
+    { "name": "dev-vcpkg", "configurePreset": "dev-vcpkg" }
+  ]
+}

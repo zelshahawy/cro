@@ -1,0 +1,12 @@
+# Build and IDE artifacts
+/build/
+/build-*/
+/.cmake/
+CMakeFiles/
+CMakeCache.txt
+cmake-build-*/
+compile_commands.json
+*.user
+*.log
+*.swp
+.DS_Store
