@@ -80,6 +80,7 @@ endif()
 add_library(cro_core
   src/core/config.cpp
   src/core/db.cpp
+  src/core/exercise.cpp
 )
 
 target_include_directories(cro_core
@@ -100,7 +101,7 @@ add_executable(cro
   src/tui.cpp
 )
 
-target_link_libraries(cro PRIVATE cro_core ftxui::screen ftxui::dom ftxui::component)
+target_link_libraries(cro PRIVATE cro_core ftxui::component)
 
 target_include_directories(cro PRIVATE
   ${CMAKE_SOURCE_DIR}/include
