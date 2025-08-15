@@ -66,7 +66,7 @@ namespace cro::db
 				"Dumbbell lateral raises",
 		};
 
-		const char *ins = "INSERT OR IGNORE INTO exercises(name, default_increment_kg) VALUES (?1, 2.5);";
+		const char *ins = "INSERT OR IGNORE INTO exercises(name, default_increment_lb) VALUES (?1, 2.5);";
 		sqlite3_stmt *st = nullptr;
 		if (sqlite3_prepare_v2(db, ins, -1, &st, nullptr) != SQLITE_OK)
 			throw std::runtime_error("prepare seed_exercises failed");
@@ -89,7 +89,7 @@ namespace cro::db
 				"CREATE TABLE IF NOT EXISTS exercises("
 				"id INTEGER PRIMARY KEY,"
 				"name TEXT NOT NULL UNIQUE,"
-				"default_increment_kg REAL NOT NULL DEFAULT 2.5);"
+				"default_increment_lb REAL NOT NULL DEFAULT 2.5);"
 				// Foods and nutrition (kept from earlier plan)
 				"CREATE TABLE IF NOT EXISTS foods("
 				"id INTEGER PRIMARY KEY,"
@@ -115,7 +115,7 @@ namespace cro::db
 				"exercise TEXT NOT NULL," // canonical name string
 				"set_index INTEGER NOT NULL,"
 				"reps INTEGER,"
-				"weight_kg REAL,"
+				"weight_lb REAL,"
 				"rir REAL);";
 
 		exec(db, sql);

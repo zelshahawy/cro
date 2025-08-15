@@ -42,28 +42,28 @@ namespace cro::exercise
 		History h;
 		// increment
 		{
-			const char *sql = "SELECT default_increment_kg FROM exercises WHERE name = ?1 LIMIT 1;";
+			const char *sql = "SELECT default_increment_lb FROM exercises WHERE name = ?1 LIMIT 1;";
 			sqlite3_stmt *st = nullptr;
 			if (sqlite3_prepare_v2(db, sql, -1, &st, nullptr) != SQLITE_OK)
 				throw std::runtime_error("prepare get_history(increment) failed");
 			sqlite3_bind_text(st, 1, name.c_str(), -1, SQLITE_TRANSIENT);
 			if (sqlite3_step(st) == SQLITE_ROW)
-				h.increment_kg = sqlite3_column_double(st, 0);
+				h.increment_lb = sqlite3_column_double(st, 0);
 			sqlite3_finalize(st);
 		}
 		// last weight (join sets->workouts for recency)
 		{
 			const char *sql =
-					"SELECT s.weight_kg FROM sets s "
+					"SELECT s.weight_lb FROM sets s "
 					"JOIN workouts w ON w.id = s.workout_id "
-					"WHERE s.exercise = ?1 AND s.weight_kg IS NOT NULL "
+					"WHERE s.exercise = ?1 AND s.weight_lb IS NOT NULL "
 					"ORDER BY w.started_at DESC, s.set_index DESC LIMIT 1;";
 			sqlite3_stmt *st = nullptr;
 			if (sqlite3_prepare_v2(db, sql, -1, &st, nullptr) != SQLITE_OK)
 				throw std::runtime_error("prepare get_history(last) failed");
 			sqlite3_bind_text(st, 1, name.c_str(), -1, SQLITE_TRANSIENT);
 			if (sqlite3_step(st) == SQLITE_ROW)
-				h.last_weight_kg = sqlite3_column_double(st, 0);
+				h.last_weight_lb = sqlite3_column_double(st, 0);
 			sqlite3_finalize(st);
 		}
 		return h;
@@ -71,13 +71,13 @@ namespace cro::exercise
 
 	double suggest_next_weight(const History &h)
 	{
-		if (h.last_weight_kg)
-			return *h.last_weight_kg + h.increment_kg;
+		if (h.last_weight_lb)
+			return *h.last_weight_lb + h.increment_lb;
 		// baseline suggestion if no history yet
-		return std::max(5.0, h.increment_kg * 2.0);
+		return std::max(5.0, h.increment_lb * 2.0);
 	}
 
-	int log_set(sqlite3 *db, const std::string &name, int reps, double weight_kg,
+	int log_set(sqlite3 *db, const std::string &name, int reps, double weight_lb,
 							std::optional<double> rir, const std::string &notes)
 	{
 		// create a workout row now
@@ -116,7 +116,7 @@ namespace cro::exercise
 		// insert set
 		int set_id = 0;
 		{
-			const char *sql = "INSERT INTO sets(workout_id, exercise, set_index, reps, weight_kg, rir) VALUES (?1, ?2, ?3, ?4, ?5, ?6);";
+			const char *sql = "INSERT INTO sets(workout_id, exercise, set_index, reps, weight_lb, rir) VALUES (?1, ?2, ?3, ?4, ?5, ?6);";
 			sqlite3_stmt *st = nullptr;
 			if (sqlite3_prepare_v2(db, sql, -1, &st, nullptr) != SQLITE_OK)
 				throw std::runtime_error("prepare insert set failed");
@@ -124,7 +124,7 @@ namespace cro::exercise
 			sqlite3_bind_text(st, 2, name.c_str(), -1, SQLITE_TRANSIENT);
 			sqlite3_bind_int(st, 3, set_index);
 			sqlite3_bind_int(st, 4, reps);
-			sqlite3_bind_double(st, 5, weight_kg);
+			sqlite3_bind_double(st, 5, weight_lb);
 			if (rir)
 				sqlite3_bind_double(st, 6, *rir);
 			else
