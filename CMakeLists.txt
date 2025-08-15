@@ -14,6 +14,11 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
 endif()
 
+# Helpful status if a toolchain is in use (e.g., vcpkg)
+if(DEFINED CMAKE_TOOLCHAIN_FILE)
+  message(STATUS "Using toolchain: ${CMAKE_TOOLCHAIN_FILE}")
+endif()
+
 # Obtain git commit (optional)
 execute_process(
   COMMAND git -C ${CMAKE_SOURCE_DIR} rev-parse --short HEAD
@@ -29,75 +34,86 @@ endif()
 configure_file(${CMAKE_SOURCE_DIR}/include/cro/version.hpp.in
                ${CMAKE_BINARY_DIR}/generated/cro/version.hpp @ONLY)
 
-# Warnings
-if(MSVC)
-  add_compile_options(/W4)
-  if(CRO_WARNINGS_AS_ERRORS)
-    add_compile_options(/WX)
+# --- Target-scoped warnings (don’t affect third-party deps) ---
+function(cro_apply_warnings target)
+  if(MSVC)
+    target_compile_options(${target} PRIVATE /W4 $<$<BOOL:${CRO_WARNINGS_AS_ERRORS}>:/WX>)
+  else()
+    target_compile_options(${target} PRIVATE
+      -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wnon-virtual-dtor
+      $<$<BOOL:${CRO_WARNINGS_AS_ERRORS}>:-Werror>
+    )
   endif()
-else()
-  add_compile_options(-Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wnon-virtual-dtor)
-  if(CRO_WARNINGS_AS_ERRORS)
-    add_compile_options(-Werror)
+endfunction()
+
+# --- Target-scoped sanitizers (non-MSVC) ---
+function(cro_apply_sanitizers target)
+  if(MSVC)
+    return()
   endif()
-endif()
-
-# Libraries from vcpkg
-include(FetchContent)
-FetchContent_Declare(
-  ftxui
-  GIT_REPOSITORY https://github.com/ArthurSonzogni/FTXUI.git
-  GIT_TAG v6.1.9
-)
-FetchContent_MakeAvailable(ftxui)
-
-find_package(SQLite3 REQUIRED)
-
-# Sanitizers (non‑MSVC)
-if(NOT MSVC)
   if(CRO_ENABLE_ASAN)
-    add_compile_options(-fsanitize=address)
-    add_link_options(-fsanitize=address)
+    target_compile_options(${target} PRIVATE -fsanitize=address)
+    target_link_options(${target} PRIVATE -fsanitize=address)
   endif()
   if(CRO_ENABLE_UBSAN)
-    add_compile_options(-fsanitize=undefined)
-    add_link_options(-fsanitize=undefined)
+    target_compile_options(${target} PRIVATE -fsanitize=undefined)
+    target_link_options(${target} PRIVATE -fsanitize=undefined)
   endif()
+endfunction()
+
+# --- Dependencies from vcpkg ---
+# Use vcpkg manifests (vcpkg.json) to install: ftxui, sqlite3
+# Make sure you do NOT also FetchContent FTXUI at the same time.
+find_package(ftxui CONFIG REQUIRED)                 # ftxui::screen ftxui::dom ftxui::component
+
+# SQLite can be either the official CMake package or vcpkg’s unofficial one.
+# Prefer the official; fall back to unofficial if needed.
+find_package(SQLite3 QUIET)
+if(TARGET SQLite::SQLite3)
+  set(CRO_SQLITE_TARGET SQLite::SQLite3)
+else()
+  find_package(unofficial-sqlite3 CONFIG REQUIRED)
+  set(CRO_SQLITE_TARGET unofficial::sqlite3::sqlite3)
 endif()
 
-# shared logic.
+# --- Core library (shared logic) ---
 add_library(cro_core
   src/core/config.cpp
+  src/core/db.cpp
 )
 
-# Public headers and generated headers
 target_include_directories(cro_core
   PUBLIC ${CMAKE_SOURCE_DIR}/include
          ${CMAKE_BINARY_DIR}/generated)
 
 target_compile_features(cro_core PUBLIC cxx_std_20)
 
-# CLI executable
+target_link_libraries(cro_core PUBLIC ${CRO_SQLITE_TARGET})
+
+cro_apply_warnings(cro_core)
+cro_apply_sanitizers(cro_core)
+
+# --- CLI executable ---
 add_executable(cro
   src/main.cpp
   src/cli.cpp
+  src/tui.cpp
 )
 
-target_link_libraries(cro PRIVATE cro_core)
-target_link_libraries(cro_core PUBLIC SQLite::SQLite3)
 target_link_libraries(cro PRIVATE cro_core ftxui::screen ftxui::dom ftxui::component)
-target_sources(cro PRIVATE src/tui.cpp)
-target_sources(cro_core PRIVATE src/core/db.cpp)
 
 target_include_directories(cro PRIVATE
   ${CMAKE_SOURCE_DIR}/include
   ${CMAKE_BINARY_DIR}/generated)
 
-# Install
+cro_apply_warnings(cro)
+cro_apply_sanitizers(cro)
+
+# --- Install ---
 include(GNUInstallDirs)
 install(TARGETS cro RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-# Tests
+# --- Tests ---
 include(CTest)
 if(BUILD_TESTING)
   add_test(NAME cro_version COMMAND $<TARGET_FILE:cro> --version)
