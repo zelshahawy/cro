@@ -69,8 +69,6 @@ namespace cro
       flash = std::string("Error: ") + e.what();
     } });
 
-    // The detail panel is its own container. Because we put menu + detail inside
-    // a **Horizontal** container, pressing → on the menu jumps straight here.
     auto detail_form = Container::Vertical({weight_input, reps_input, minus_btn, plus_btn, log_btn});
     auto detail = Renderer(detail_form, [&]
                            {
@@ -90,7 +88,6 @@ namespace cro
       text(flash) | color(Color::GrayLight)
     }) | flex; });
 
-    // Split: left list, right details. **Right arrow** switches between them.
     auto training_split = Container::Horizontal({menu, detail});
     auto training_page = Renderer(training_split, [&]
                                   {
@@ -116,7 +113,6 @@ namespace cro
     // Switch page by tab index
     auto pages = Container::Tab({dashboard_page, training_page, nutrition_page, trends_page, settings_page}, &tab);
 
-    // Root: navbar on top, page underneath
     auto root = Container::Vertical({tabs_toggle, pages});
     auto app = Renderer(root, [&]
                         { return vbox({hbox({text("Cro") | bold, filler(), text("q: quit")}),
@@ -126,7 +122,6 @@ namespace cro
                                        pages->Render() | flex}) |
                                  border; });
 
-    // Global shortcuts
     auto keymap = CatchEvent(app, [&](Event e)
                              {
     if (e == Event::Character('q') || e == Event::Escape) { screen.ExitLoopClosure()(); return true; }

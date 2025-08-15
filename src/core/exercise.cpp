@@ -40,7 +40,6 @@ namespace cro::exercise
 	History get_history(sqlite3 *db, const std::string &name)
 	{
 		History h;
-		// increment
 		{
 			const char *sql = "SELECT default_increment_lb FROM exercises WHERE name = ?1 LIMIT 1;";
 			sqlite3_stmt *st = nullptr;
@@ -51,7 +50,7 @@ namespace cro::exercise
 				h.increment_lb = sqlite3_column_double(st, 0);
 			sqlite3_finalize(st);
 		}
-		// last weight (join sets->workouts for recency)
+
 		{
 			const char *sql =
 					"SELECT s.weight_lb FROM sets s "
@@ -80,7 +79,6 @@ namespace cro::exercise
 	int log_set(sqlite3 *db, const std::string &name, int reps, double weight_lb,
 							std::optional<double> rir, const std::string &notes)
 	{
-		// create a workout row now
 		int workout_id = 0;
 		{
 			const char *sql = "INSERT INTO workouts(started_at, notes) VALUES (?1, ?2);";
@@ -99,7 +97,6 @@ namespace cro::exercise
 			workout_id = static_cast<int>(sqlite3_last_insert_rowid(db));
 		}
 
-		// compute next set_index within this workout for this exercise
 		int set_index = 1;
 		{
 			const char *sql = "SELECT COALESCE(MAX(set_index)+1,1) FROM sets WHERE workout_id=?1 AND exercise=?2;";
@@ -113,7 +110,6 @@ namespace cro::exercise
 			sqlite3_finalize(st);
 		}
 
-		// insert set
 		int set_id = 0;
 		{
 			const char *sql = "INSERT INTO sets(workout_id, exercise, set_index, reps, weight_lb, rir) VALUES (?1, ?2, ?3, ?4, ?5, ?6);";

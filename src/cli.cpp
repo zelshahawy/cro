@@ -15,8 +15,6 @@ using namespace std::string_view_literals;
 namespace cro
 {
 
-  // ----- helpers --------------------------------------------------------------
-
   static void print_help()
   {
     std::cout << "Cro — your terminal gym tracker\n"
@@ -53,8 +51,6 @@ namespace cro
     return h; // move out; keeps DB open while in scope
   }
 
-  // ----- CLI ------------------------------------------------------------------
-
   int run_cli(int argc, char **argv)
   {
     if (argc > 1)
@@ -78,7 +74,6 @@ namespace cro
       }
     }
 
-    // REPL mode (optional)
     auto db = init_db();
     print_help();
     std::string line;

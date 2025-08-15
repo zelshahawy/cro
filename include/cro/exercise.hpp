@@ -8,14 +8,13 @@ namespace cro::exercise
 {
 	struct History
 	{
-		std::optional<double> last_weight_lb; // last logged working set weight
-		double increment_lb = 2.5;						// default per-exercise increment
+		std::optional<double> last_weight_lb;
+		double increment_lb = 2.5;
 	};
 
-	// Read latest weight & increment for an exercise by name
 	History get_history(sqlite3 *db, const std::string &name);
 
-	// Simple progression: last + increment (or a small baseline if none yet)
+	// Simple progression: last + increment.
 	double suggest_next_weight(const History &);
 
 	// Log a single set. Creates a new workout row with current timestamp.

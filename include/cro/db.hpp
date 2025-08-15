@@ -16,6 +16,6 @@ namespace cro::db
     Handle &operator=(const Handle &) = delete;
   };
 
-  Handle open(const std::string &path); // throws std::runtime_error on failure
-  void migrate(sqlite3 *db);            // create tables if needed
+  Handle open(const std::string &path);
+  void migrate(sqlite3 *db);
 } // namespace cro::db
