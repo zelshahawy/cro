@@ -48,7 +48,7 @@ namespace cro
     std::filesystem::create_directories(std::filesystem::path(path).parent_path());
     auto h = cro::db::open(path);
     cro::db::migrate(h.raw);
-    return h; // move out; keeps DB open while in scope
+    return h;
   }
 
   int run_cli(int argc, char **argv)
