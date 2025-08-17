@@ -100,7 +100,7 @@ namespace cro
       detail->Render() | flex
     }); });
 
-    // --- Stub pages ----------------------------------------------------------
+    // Stub pages
     auto dashboard_page = Renderer([&]
                                    { return vbox({text("Dashboard (stub)") | dim, text("Upcoming: daily summary, PRs, weekly volume") | dim}) | center; });
     auto nutrition_page = Renderer([&]

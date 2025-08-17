@@ -90,7 +90,7 @@ namespace cro::db
 				"id INTEGER PRIMARY KEY,"
 				"name TEXT NOT NULL UNIQUE,"
 				"default_increment_lb REAL NOT NULL DEFAULT 2.5);"
-				// Foods and nutrition (kept from earlier plan)
+				// Foods and nutrition
 				"CREATE TABLE IF NOT EXISTS foods("
 				"id INTEGER PRIMARY KEY,"
 				"name TEXT NOT NULL,"
