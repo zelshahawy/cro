@@ -118,10 +118,10 @@ namespace cro
         import_status = "Please enter a file path";
         return;
       }
-      
+
       try {
         auto result = cro::exercise::import_from_excel(db, import_file_path);
-        import_status = "Imported " + std::to_string(result.workouts_imported) + 
+        import_status = "Imported " + std::to_string(result.workouts_imported) +
                        " workouts, " + std::to_string(result.sets_imported) + " sets";
         if (!result.errors.empty()) {
           import_status += " (with " + std::to_string(result.errors.size()) + " errors)";
@@ -137,23 +137,22 @@ namespace cro
 
     auto settings_form = Container::Vertical({import_path_input, import_btn});
     auto settings_page = Renderer(settings_form, [&]
-                                  { 
-      return vbox({
-        text("Settings") | bold,
-        separator(),
-        text("Import Data from Excel"),
-        text("Expected format: Date, Exercise, Reps, Weight, Notes (optional)") | dim,
-        hbox({ text("File path:"), import_path_input->Render() }) | border,
-        separator(),
-        import_btn->Render(),
-        separator(),
-        text(import_status) | (import_status.find("failed") != std::string::npos || 
-                              import_status.find("error") != std::string::npos ? 
-                              color(Color::Red) : color(Color::Green)),
-        separator(),
-        text("Other Settings (stub)") | dim,
-        text("Units, DB path, increments per exercise") | dim
-      }) | flex; });
+                                  { return vbox({text("Settings") | bold,
+                                                 separator(),
+                                                 text("Import Data from Excel"),
+                                                 text("Expected format: Date, Exercise, Reps, Weight, Notes (optional)") | dim,
+                                                 hbox({text("File path:"), import_path_input->Render()}) | border,
+                                                 separator(),
+                                                 import_btn->Render(),
+                                                 separator(),
+                                                 text(import_status) | (import_status.find("failed") != std::string::npos ||
+                                                                                import_status.find("error") != std::string::npos
+                                                                            ? color(Color::Red)
+                                                                            : color(Color::Green)),
+                                                 separator(),
+                                                 text("Other Settings (stub)") | dim,
+                                                 text("Units, DB path, increments per exercise") | dim}) |
+                                           flex; });
 
     // Switch page by tab index
     auto pages = Container::Tab({dashboard_page, training_page, nutrition_page, trends_page, settings_page}, &tab);
