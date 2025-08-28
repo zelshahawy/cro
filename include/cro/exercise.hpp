@@ -12,6 +12,13 @@ namespace cro::exercise
 		double increment_lb = 2.5;
 	};
 
+	struct ImportResult
+	{
+		int workouts_imported = 0;
+		int sets_imported = 0;
+		std::vector<std::string> errors;
+	};
+
 	History get_history(sqlite3 *db, const std::string &name);
 
 	// Simple progression: last + increment.
@@ -24,4 +31,7 @@ namespace cro::exercise
 
 	// List all exercises from the catalog (alphabetical)
 	std::vector<std::string> all_exercises(sqlite3 *db);
+
+	// Import workout data from Excel file
+	ImportResult import_from_excel(sqlite3 *db, const std::string &file_path);
 } // namespace cro::exercise

@@ -76,6 +76,9 @@ else()
   set(CRO_SQLITE_TARGET unofficial::sqlite3::sqlite3)
 endif()
 
+# Find xlnt for Excel import
+find_package(xlnt CONFIG REQUIRED)
+
 # --- Core library (shared logic) ---
 add_library(cro_core
   src/core/config.cpp
@@ -89,7 +92,7 @@ target_include_directories(cro_core
 
 target_compile_features(cro_core PUBLIC cxx_std_20)
 
-target_link_libraries(cro_core PUBLIC ${CRO_SQLITE_TARGET})
+target_link_libraries(cro_core PUBLIC ${CRO_SQLITE_TARGET} xlnt::xlnt)
 
 cro_apply_warnings(cro_core)
 cro_apply_sanitizers(cro_core)

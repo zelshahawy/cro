@@ -107,8 +107,53 @@ namespace cro
                                    { return vbox({text("Nutrition (stub)") | dim, text("Foods, meals, macros, targets") | dim}) | center; });
     auto trends_page = Renderer([&]
                                 { return vbox({text("Trends (stub)") | dim, text("Progress charts, bodyweight, volume") | dim}) | center; });
-    auto settings_page = Renderer([&]
-                                  { return vbox({text("Settings (stub)") | dim, text("Units, DB path, increments per exercise") | dim}) | center; });
+
+    // Settings page with Excel import
+    std::string import_file_path;
+    std::string import_status;
+    auto import_path_input = Input(&import_file_path, "path/to/workout_data.xlsx");
+    auto import_btn = Button("Import from Excel", [&]
+                             {
+      if (import_file_path.empty()) {
+        import_status = "Please enter a file path";
+        return;
+      }
+      
+      try {
+        auto result = cro::exercise::import_from_excel(db, import_file_path);
+        import_status = "Imported " + std::to_string(result.workouts_imported) + 
+                       " workouts, " + std::to_string(result.sets_imported) + " sets";
+        if (!result.errors.empty()) {
+          import_status += " (with " + std::to_string(result.errors.size()) + " errors)";
+        }
+        // Refresh exercise list
+        names = cro::exercise::all_exercises(db);
+        if (names.empty()) names = {"Deadlift"};
+        if (selected >= static_cast<int>(names.size())) selected = 0;
+        recompute(selected);
+      } catch (const std::exception& e) {
+        import_status = std::string("Import failed: ") + e.what();
+      } });
+
+    auto settings_form = Container::Vertical({import_path_input, import_btn});
+    auto settings_page = Renderer(settings_form, [&]
+                                  { 
+      return vbox({
+        text("Settings") | bold,
+        separator(),
+        text("Import Data from Excel"),
+        text("Expected format: Date, Exercise, Reps, Weight, Notes (optional)") | dim,
+        hbox({ text("File path:"), import_path_input->Render() }) | border,
+        separator(),
+        import_btn->Render(),
+        separator(),
+        text(import_status) | (import_status.find("failed") != std::string::npos || 
+                              import_status.find("error") != std::string::npos ? 
+                              color(Color::Red) : color(Color::Green)),
+        separator(),
+        text("Other Settings (stub)") | dim,
+        text("Units, DB path, increments per exercise") | dim
+      }) | flex; });
 
     // Switch page by tab index
     auto pages = Container::Tab({dashboard_page, training_page, nutrition_page, trends_page, settings_page}, &tab);

@@ -8,6 +8,10 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <xlnt/xlnt.hpp>
+#include <map>
+#include <algorithm>
+#include <tuple>
 
 namespace
 {
@@ -147,6 +151,180 @@ namespace cro::exercise
 		}
 		sqlite3_finalize(st);
 		return out;
+	}
+
+	ImportResult import_from_excel(sqlite3 *db, const std::string &file_path)
+	{
+		ImportResult result;
+		
+		try 
+		{
+			xlnt::workbook wb;
+			wb.load(file_path);
+			auto ws = wb.active_sheet();
+			
+			// Expected format: Date, Exercise, Reps, Weight, Notes
+			// First row should be headers
+			std::map<std::string, int> headers;
+			auto header_row = ws.rows().begin();
+			int col_idx = 0;
+			for (auto& cell : *header_row)
+			{
+				std::string header = cell.to_string();
+				std::transform(header.begin(), header.end(), header.begin(), ::tolower);
+				headers[header] = col_idx++;
+			}
+			
+			// Check required headers
+			if (headers.find("date") == headers.end() ||
+					headers.find("exercise") == headers.end() ||
+					headers.find("reps") == headers.end() ||
+					headers.find("weight") == headers.end())
+			{
+				result.errors.push_back("Missing required columns: Date, Exercise, Reps, Weight");
+				return result;
+			}
+			
+			int date_col = headers["date"];
+			int exercise_col = headers["exercise"];
+			int reps_col = headers["reps"];
+			int weight_col = headers["weight"];
+			int notes_col = headers.find("notes") != headers.end() ? headers["notes"] : -1;
+			
+			// Group by workout (same date = same workout)
+			std::map<std::string, std::vector<std::tuple<std::string, int, double, std::string>>> workouts;
+			
+			auto row_iter = ws.rows().begin();
+			++row_iter; // Skip header row
+			
+			for (; row_iter != ws.rows().end(); ++row_iter)
+			{
+				try 
+				{
+					auto& row = *row_iter;
+					std::vector<xlnt::cell> cells(row.begin(), row.end());
+					
+					if (cells.size() <= std::max({date_col, exercise_col, reps_col, weight_col}))
+						continue; // Skip incomplete rows
+					
+					std::string date = cells[date_col].to_string();
+					std::string exercise = cells[exercise_col].to_string();
+					
+					if (date.empty() || exercise.empty())
+						continue; // Skip empty rows
+					
+					int reps = 0;
+					double weight = 0.0;
+					std::string notes;
+					
+					try {
+						reps = cells[reps_col].value<int>();
+					} catch (...) {
+						result.errors.push_back("Invalid reps value in row with exercise: " + exercise);
+						continue;
+					}
+					
+					try {
+						weight = cells[weight_col].value<double>();
+					} catch (...) {
+						result.errors.push_back("Invalid weight value in row with exercise: " + exercise);
+						continue;
+					}
+					
+					if (notes_col >= 0 && notes_col < static_cast<int>(cells.size()))
+					{
+						notes = cells[notes_col].to_string();
+					}
+					
+					workouts[date].emplace_back(exercise, reps, weight, notes);
+				}
+				catch (const std::exception& e)
+				{
+					result.errors.push_back("Error processing row: " + std::string(e.what()));
+				}
+			}
+			
+			// Insert workouts and sets
+			for (const auto& [date, sets] : workouts)
+			{
+				try 
+				{
+					// Create workout
+					int workout_id = 0;
+					{
+						const char *sql = "INSERT INTO workouts(started_at, notes) VALUES (?1, ?2);";
+						sqlite3_stmt *st = nullptr;
+						if (sqlite3_prepare_v2(db, sql, -1, &st, nullptr) != SQLITE_OK)
+							throw std::runtime_error("prepare insert workout failed");
+						
+						sqlite3_bind_text(st, 1, date.c_str(), -1, SQLITE_TRANSIENT);
+						sqlite3_bind_text(st, 2, "Imported from Excel", -1, SQLITE_TRANSIENT);
+						
+						if (sqlite3_step(st) != SQLITE_DONE)
+							throw std::runtime_error("insert workout failed");
+						sqlite3_finalize(st);
+						workout_id = static_cast<int>(sqlite3_last_insert_rowid(db));
+					}
+					
+					// Insert sets for this workout
+					std::map<std::string, int> exercise_set_counts;
+					for (const auto& [exercise, reps, weight, notes] : sets)
+					{
+						try 
+						{
+							// Ensure exercise exists in catalog
+							{
+								const char *sql = "INSERT OR IGNORE INTO exercises(name, default_increment_lb) VALUES (?1, 2.5);";
+								sqlite3_stmt *st = nullptr;
+								if (sqlite3_prepare_v2(db, sql, -1, &st, nullptr) != SQLITE_OK)
+									throw std::runtime_error("prepare insert exercise failed");
+								sqlite3_bind_text(st, 1, exercise.c_str(), -1, SQLITE_TRANSIENT);
+								sqlite3_step(st);
+								sqlite3_finalize(st);
+							}
+							
+							// Insert set
+							int set_index = ++exercise_set_counts[exercise];
+							{
+								const char *sql = "INSERT INTO sets(workout_id, exercise, set_index, reps, weight_lb, rir) VALUES (?1, ?2, ?3, ?4, ?5, ?6);";
+								sqlite3_stmt *st = nullptr;
+								if (sqlite3_prepare_v2(db, sql, -1, &st, nullptr) != SQLITE_OK)
+									throw std::runtime_error("prepare insert set failed");
+								
+								sqlite3_bind_int(st, 1, workout_id);
+								sqlite3_bind_text(st, 2, exercise.c_str(), -1, SQLITE_TRANSIENT);
+								sqlite3_bind_int(st, 3, set_index);
+								sqlite3_bind_int(st, 4, reps);
+								sqlite3_bind_double(st, 5, weight);
+								sqlite3_bind_null(st, 6); // rir not provided in import
+								
+								if (sqlite3_step(st) != SQLITE_DONE)
+									throw std::runtime_error("insert set failed");
+								sqlite3_finalize(st);
+							}
+							
+							result.sets_imported++;
+						}
+						catch (const std::exception& e)
+						{
+							result.errors.push_back("Error inserting set for " + exercise + ": " + e.what());
+						}
+					}
+					
+					result.workouts_imported++;
+				}
+				catch (const std::exception& e)
+				{
+					result.errors.push_back("Error processing workout for date " + date + ": " + e.what());
+				}
+			}
+		}
+		catch (const std::exception& e)
+		{
+			result.errors.push_back("Failed to read Excel file: " + std::string(e.what()));
+		}
+		
+		return result;
 	}
 
 } // namespace cro::exercise
