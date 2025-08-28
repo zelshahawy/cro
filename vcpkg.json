@@ -3,7 +3,8 @@
   "version-string": "0.1.0",
   "dependencies": [
     "ftxui",
-    "sqlite3"
+    "sqlite3",
+    "xlnt"
   ],
   "builtin-baseline": "08990a7bace02fd8aba4e01e74cd38f26cb5ed61"
 }
